@@ -26,7 +26,7 @@ params:
   a: NA
   k: NA
   gr: NA
-  results: NA
+  totalscores_table: NA
   cutScore: NA
   histogram_totalscores: NA
   standardscores_table: NA
@@ -64,13 +64,9 @@ params:
   irtability: NA
   isGroupPresent: NA
   histCheck: NA
-  cutScoregroup: NA
-  resultsgroup: NA
-  histbyscoregroup0: NA
-  histbyscoregroup1: NA
-  maxScore0: NA
-  maxScore1: NA
-  DIF_scores_ttest: NA
+  DIF_total_table: NA
+  DIF_total_hist: NA
+  DIF_total_ttest: NA
   deltaplotCheck: NA
   DIF_deltaplot: NA
   DIF_deltaplot_text: NA
@@ -85,6 +81,10 @@ params:
   sessionInfo: NA
 ---
 
+---
+pagetitle: `r ifelse(params$dataset == "", "", params$dataset)`
+---
+
 <style>
 body {text-align: justify}
 </style>
@@ -92,7 +92,7 @@ body {text-align: justify}
 
 # Introduction
 
-This report was created by by R version `r getRversion()` and its package ShinyItemAnalysis version `r packageVersion("ShinyItemAnalysis")`. ShinyItemAnalysis provides test and item analysis and it is available on [CRAN](https://CRAN.R-project.org/package=ShinyItemAnalysis) and also [online](https://shiny.cs.cas.cz/ShinyItemAnalysis/). 
+This report was created by R version `r getRversion()` and its package ShinyItemAnalysis version `r packageVersion("ShinyItemAnalysis")`. ShinyItemAnalysis provides test and item analysis and it is available on [CRAN](https://CRAN.R-project.org/package=ShinyItemAnalysis) and also [online](https://shiny.cs.cas.cz/ShinyItemAnalysis/). 
 
 To cite ShinyItemAnalysis application in publications, please, use:
 
@@ -115,11 +115,11 @@ This project was supported by Czech Science Foundation under grant number [GJ15-
 ## Total scores
 
 ### Summary table of total scores
-The table below summarizes basic characteristics of total scores including minimum and maximum, mean, median, standard deviation, skewness and kurtosis. The kurtosis here is estimated by a sample kurtosis $\frac{m_4}{m_2^2}$, where $m_4$ is the fourth central moment and $m_2$ is the second central moment. The skewness is estimated by a sample skewness $\frac{m_3}{m_2^{3/2}}$, where $m_3$ is the third central moment. The kurtosis for normally distributed scores is near the value of 3 and the skewness is near the value of 0. 
+The table below summarizes basic characteristics of total scores including number of respondents, minimum and maximum values, mean, median, standard deviation, skewness, and kurtosis. The skewness for normally distributed scores is near the value of 0 and the kurtosis is near the value of 3.
 
 ```{r total-scores-table, echo = FALSE}
 library(knitr)
-table = params$results
+table = params$totalscores_table
 colnames(table) = NULL
 
 kable(t(table), digits = c(0, 0, 2, 2, 2, 2, 2), align = 'c')
@@ -173,23 +173,10 @@ kable(table, align = 'c')
                           "median" = "median",
                           "centroid" = "centroid")`
                           
-`r if (any(params$corr_plot != "") & params$corr_plot_clustmethod != "none") {paste("A correlation heat map is reordered using hierarchical clustering with", names(clustmethod_names)[clustmethod_names == params$corr_plot_clustmethod], "linkage method. The number of highlighted clusters is", params$corr_plot_numclust, ". ")}`
+`r if (any(params$corr_plot != "") & params$corr_plot_clustmethod != "none") {paste0("A correlation heat map is reordered using hierarchical clustering with ", names(clustmethod_names)[clustmethod_names == params$corr_plot_clustmethod], " linkage method. The number of highlighted clusters is ", params$corr_plot_numclust, ". ")}`
 
-```{r corr-plot, echo = FALSE, fig.width = 11, fig.height = 4, fig.align = 'center', dpi = 300}
-if (any(params$corr_plot != "")) {
-  corP <- params$corr_plot
-  numclust <- params$corr_plot_numclust
-  clustmethod <- params$corr_plot_clustmethod
-  
-  tlcex <- ifelse(ncol(corP) > 30, 0.7, 1)
-  
-  if (clustmethod == "none"){
-    corrplot(corP, tl.cex = tlcex)
-  } else {
-    corrplot(corP, tl.cex = tlcex, order = "hclust", 
-             hclust.method = clustmethod, addrect = numclust)
-  }
-}
+```{r corr-plot, echo = FALSE, include = any(nzchar(params$corr_plot)), fig.height = 4, fig.align = 'center', dpi = 300}
+params$corr_plot
 ```
 
 `r if (any(params$corr_plot != "")) {"### Scree plot"}` 
@@ -209,7 +196,7 @@ if (any(params$corr_plot != "")) {
 
 `r if(!(params$isCriterionPresent) & params$validity_check){"No criterion variable vector is present. The predictive validity analysis could not have been generated."}`
 
-```{r validity-plot, echo = FALSE, fig.width = 11, fig.height = 4, fig.align = 'center', dpi = 300}
+```{r validity-plot, echo = FALSE, fig.width = 11, fig.height = 4, fig.align = 'center', dpi = 300, message = FALSE}
 if(params$isCriterionPresent & params$validity_check){
   params$validity_plot + 
     theme(text = element_text(size = 11),
@@ -638,27 +625,20 @@ DIF analysis may come to a different conclusion than test of group differences i
 ```
 
 ```{r DIF-section-histograms-table, echo = FALSE, results = "asis", eval = eval_histograms}
-kable(params$resultsgroup, 
+kable(params$DIF_total_table, 
           digits = c(0, 0, 0, 3, 3, 3, 3), 
           align = c('l', rep('c', 6)))
 ```
 
 ```{r DIF-section-histograms-part2, eval = eval_histograms, echo = FALSE, results = 'asis'}
-txt <- paste0("For selected cut-score ", params$cutScoregroup, ", the blue part of histograms shows respondents with a total score above the cut-score, the grey column shows respondents with a  total score equal to the cut-score and the red part of histograms shows respondents below the cut-score.")
-
-cat(paste("### Histograms of total scores by group \n", txt))
+cat(paste("### Histograms of total scores by group \n"))
 ```
 
 ```{r DIF-section-histograms-plot, eval = eval_histograms, echo = FALSE, fig.width = 11, fig.height = 4, fig.align = 'center', dpi = 300}
-g1 = params$histbyscoregroup0 +
+params$DIF_total_hist +
   theme(text = element_text(size = 11), 
-        plot.title = element_text(face = "bold")) + 
-  ggtitle("Reference group")
-g2 = params$histbyscoregroup1 + 
-  theme(text = element_text(size = 11), 
-        plot.title = element_text(face = "bold")) + 
-  ggtitle("Focal group")
-grid.arrange(g1, g2, nrow = 1)
+        plot.title = element_text(face = "bold"),
+        legend.position = c(0.1, 0.87)) 
 ```
 
 ```{r DIF-section-histograms-part3, eval = eval_histograms, echo = FALSE, results = 'asis'}
@@ -670,7 +650,7 @@ Test for difference in total scores between reference and focal group is based o
 ```
 
 ```{r DIF-section-histograms-ttest, echo = FALSE, eval = eval_histograms}
-kable(params$DIF_scores_ttest,
+kable(params$DIF_total_ttest,
       align = rep('c', 4), row.names = F)
 ```
 
